@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <title>Treenikalenteri</title>
+   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+   <link rel="stylesheet" href="http://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+   <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</head>
+<style>
+   #layout {
+      padding-left: 40px;
+      padding-top: 40px;
+   }
+
+   label {
+      display: block;
+      width: 110px;
+      float: left;
+   }
+
+   input {
+      width: 100px;
+   }
+
+   table {
+      font-family: arial, sans-serif;
+      font-size: 12px;
+      border: 1px solid rgb(85, 79, 79);
+      padding: 6px;
+   }
+
+   td {
+      border: 1px solid rgb(221, 221, 221);
+      text-align: right;
+      padding: 6px;
+      width: 110px;
+   }
+
+   th {
+      border: 1px solid rgb(221, 221, 221);
+      background-color: rgb(221, 221, 221);
+      text-align: center;
+      padding: 6px;
+      width: 110px;
+   }
+
+   tr:nth-child(even) {
+      background-color: rgb(221, 221, 221);
+   }
+
+   .remove {
+      color: rgb(255, 0, 0);
+      cursor: pointer;
+   }
+
+   .change {
+      color: rgb(0, 128, 0);
+      cursor: pointer;
+   }
+</style>
+
+<body id="layout" onkeydown="checkKey(event)">
+   <div>
+      <div class="row">
+         <div class="col-md-4">
+            <h3>Treenikalenteri</h3>
+            <form>
+               <p>
+                  Päivämäärä
+                  <input type="text" id="dpicker" onchange="getDate()" />
+               </p>
+               <label>Treeni</label>
+               <form>
+                  <select id="workout">
+                     <option>Valitse</option>
+                     <option value="SpinB">Spinning Basic</option>
+                     <option value="SpinC">Spinning Cardio</option>
+                     <option value="SpinM">Spinning muu</option>
+                     <option value="Sali1">Sali-ohjelma 1</option>
+                     <option value="Sali2">Sali-ohjelma 2</option>
+                     <option value="Kävely">Kävely peruskestävyys</option>
+                     <option value="Hölkkä">Hölkkä vauhtikestävyys</option>
+                     <option value="PT">PT-tapaaminen</option>
+                     <option value="KH">Kehonhuolto</option>
+                     <option value="V">Venyttely</option>
+                  </select>
+                  <br><br>
+               </form>
+               <label>Kesto</label>
+               <form action="/action_page.php">
+                  <select id="duration">
+                     <option>Valitse</option>
+                     <option value="30">30 min</option>
+                     <option value="35">35 min</option>
+                     <option value="40">40 min</option>
+                     <option value="45">45 min</option>
+                     <option value="50">50 min</option>
+                     <option value="55">55 min</option>
+                     <option value="60">60 min</option>
+                     <option value="70">70 min</option>
+                     <option value="80">80 min</option>
+                     <option value="90">90 min</option>
+                  </select>
+                  <br><br>
+               </form>
+               <label>Syke µ</label>
+               <input type="number" id="pulse" />
+               <br><br>
+               <label>Kulutus kcal</label>
+               <input type="number" id="minusKcal" />
+               <br><br>
+               <label>Ravinto kcal</label>
+               <input type="number" id="plusKcal" />
+               <br><br>
+               <label>&nbsp;</label>
+               <input type="button" id="add" value="Lisää" onclick="addOnList()" />
+               <br>
+               <label>&nbsp;</label>
+               <input type="button" id="cancel" value="Peruuta" onclick="returnInitialCondition()" />
+               <label>&nbsp;</label>
+            </form>
+         </div>
+         <div class="col-md-8">
+            <h3>Treenit</h3>
+            <table>
+               <thead>
+                  <tr>
+                     <th>Pvm</th>
+                     <th>Harjoitus</th>
+                     <th>Kesto min</th>
+                     <th>Syke µ</th>
+                     <th>Kulutus -kcal</th>
+                     <th>Energia +kcal</th>
+                     <th>Muuta</th>
+                     <th>Poista</th>
+                  </tr>
+               </thead>
+               <tbody id="list"></tbody>
+            </table>
+         </div>
+      </div>
+   </div>
+   <script>
+      $(document).ready(function () {
+         $("#dpicker").datepicker({
+            showOn: "button",
+            dateFormat: "dd.mm.yy",
+            monthNames: [
+               "Tammikuu",
+               "Helmikuu",
+               "Maaliskuu",
+               "Huhtikuu",
+               "Toukokuu",
+               "Kesäkuu",
+               "Heinäkuu",
+               "Elokuu",
+               "Syyskuu",
+               "Lokakuu",
+               "Marraskuu",
+               "Joulukuu",
+            ],
+            dayNamesMin: ["Su", "Ma", "Ti", "Ke", "To", "Pe", "La"],
+            firstDay: 1,
+         });
+      });
+
+      function getDate() {
+         date = document.getElementById("dpicker").value;
+      }
+      var itemList = [];
+      var changeableIndex = -1;
+
+      document.getElementById("cancel").style.visibility = "hidden";
+      document.getElementById("dpicker").focus();
+      makeList();
+
+      function getList() {
+         itemList = JSON.parse(localStorage.getItem("listJSON"));
+         if (itemList == null) {
+            itemList = [];
+         }
+      }
+      function addOnList() {
+         var date = document.getElementById("dpicker").value;
+         var workout = document.getElementById("workout").value;
+         var duration = document.getElementById("duration").value;
+         var pulse = document.getElementById("pulse").value;
+         var minusKcal = document.getElementById("minusKcal").value;
+         var plusKcal = document.getElementById("plusKcal").value;
+
+         if (date == "" || workout == "" || duration == "" ||
+            pulse == "" || minusKcal == "" || plusKcal == "") {
+            alert("Täytä kaikki tiedot.");
+         }
+         if (date != "" && workout != "" && duration != "" &&
+            pulse != "" && minusKcal != "" && plusKcal != "") {
+            var items = {};
+            items.date = date;
+            items.workout = workout;
+            items.duration = duration;
+            items.pulse = pulse;
+            items.minusKcal = minusKcal;
+            items.plusKcal = plusKcal;
+
+            if (changeableIndex != -1) {
+               itemList[changeableIndex] = items;
+               changeableIndex = -1;
+            } else {
+               itemList.push(items);
+            }
+            localStorage.setItem("listJSON", JSON.stringify(itemList));
+            returnInitialCondition();
+         }
+         makeList();
+      }
+      function makeList() {
+         getList();
+         var listStr = "";
+
+         for (var i = 0; i < itemList.length; i++) {
+            listStr += "<tr>";
+            listStr += "<td>";
+            listStr += itemList[i].date;
+            listStr += "</td>";
+            listStr += "<td>";
+            listStr += itemList[i].workout;
+            listStr += "</td>";
+            listStr += "<td>";
+            listStr += itemList[i].duration;
+            listStr += "</td>";
+            listStr += "<td>";
+            listStr += itemList[i].pulse;
+            listStr += "</td>";
+            listStr += "<td>";
+            listStr += itemList[i].minusKcal;
+            listStr += "</td>";
+            listStr += "<td>";
+            listStr += itemList[i].plusKcal;
+            listStr += "</td>";
+            listStr += "<td>";
+            listStr +=
+               "<span class='change' onclick='change(" +
+               i + ")'><acronym title='Muuta'>C</acronym></span>&nbsp;";
+            listStr += "</td>";
+            listStr += "<td>";
+            listStr +=
+               "<span class='remove' onclick='remove(" +
+               i + ")'><acronym title='Poista'>X</acronym></span>";
+            listStr += "</td>";
+            listStr += "</tr>";
+         }
+         document.getElementById("list").innerHTML = listStr;
+      }
+      function change(index) {
+         document.getElementById("dpicker").value = itemList[index].date;
+         document.getElementById("workout").value = itemList[index].workout;
+         document.getElementById("duration").value =
+            itemList[index].duration;
+         document.getElementById("pulse").value = itemList[index].pulse;
+         document.getElementById("minusKcal").value =
+            itemList[index].minusKcal;
+         document.getElementById("plusKcal").value =
+            itemList[index].plusKcal;
+         document.getElementById("add").value = "Hyväksy muutos";
+         changeableIndex = index;
+         document.getElementById("cancel").style.visibility = "visible";
+      }
+      function remove(index) {
+         var r = confirm(
+            "Haluatko varmasti poistaa tiedot " + itemList[index].date + "?"
+         );
+
+         if (r == true) {
+            itemList.splice(index, 1);
+            localStorage.setItem("listJSON", JSON.stringify(itemList));
+            makeList();
+            returnInitialCondition();
+         }
+      }
+      function returnInitialCondition() {
+         document.getElementById("cancel").style.visibility = "hidden";
+         document.getElementById("add").value = "Lisää tiedot";
+         document.getElementById("dpicker").value = "";
+         document.getElementById("workout").value = "";
+         document.getElementById("duration").value = "";
+         document.getElementById("pulse").value = "";
+         document.getElementById("minusKcal").value = "";
+         document.getElementById("plusKcal").value = "";
+         document.getElementById("dpicker").focus();
+      }
+      function checkKey(event) {
+         if (event.keyCode == 13) {
+            addOnList();
+         }
+      }
+   </script>
+</body>
+
+</html>
